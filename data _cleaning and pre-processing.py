@@ -21,12 +21,11 @@ for city, path in file_paths.items():
     df['City'] = city
     city_dataframes[city] = df
 
-# Concatenate all city data into a single DataFrame
 combined_df = pd.concat(city_dataframes.values(), ignore_index=True)
 
 print(combined_df)
 
-#a function to extract relevant fields 
+#function to extract relevant fields 
 def extract_features(row):
     try:
         car_details = ast.literal_eval(row['new_car_detail'])
@@ -35,7 +34,6 @@ def extract_features(row):
     except (ValueError, SyntaxError):
         return pd.Series([None] * 7)
     
-    #extract features
     fuel_type = car_details.get('ft', None)
     body_type = car_details.get('bt', None)
     transmission = car_details.get('transmission', None)
@@ -46,15 +44,12 @@ def extract_features(row):
     model=car_details.get('model',None)
     price=car_details.get('price',None)
 
-    
-    #extract engine details
     engine = None
     for spec in car_specs.get('top', []):
         if spec.get('key') == 'Engine':
             engine = spec.get('value', None)
             break
 
-    #extract registration year
     Registration_Year=None
     for item in car_overview.get('top', []):
         if item.get('key') == 'Registration Year':
@@ -64,10 +59,8 @@ def extract_features(row):
     return pd.Series([fuel_type, body_type, transmission, km_driven, model_year, price, engine, brand, model, Registration_Year],
                      index=['Fuel_Type', 'Body_Type', 'Transmission', 'KM_Driven', 'Model_Year', 'Price', 'Engine', 'Brand', 'Model', 'Registration_Year'])
 
-# Apply extraction to each row
 extracted_data = combined_df.apply(extract_features, axis=1)
 
-# Combine extracted features with city information
 structured_df = pd.concat([extracted_data, combined_df['City']], axis=1)
 
 
@@ -83,7 +76,6 @@ structured_df['Registration_Year'] = pd.to_numeric(structured_df['Registration_Y
 
 
 def convert_price_to_lakh(price):
-    # Remove currency symbol and any commas
     price = price.replace('₹', '').replace(',', '').strip()
     
     # Split into amount and unit (Lakh, Crore, etc.)
@@ -99,9 +91,8 @@ def convert_price_to_lakh(price):
             return amount * 100
         elif unit == 'thousand':
             return amount / 100  
-    return np.nan  # Return NaN if format is unexpected
+    return np.nan  
 
-# Apply conversion function to Price column
 structured_df['Price'] = structured_df['Price'].apply(convert_price_to_lakh)
 
 # Convert to numeric
@@ -132,7 +123,12 @@ num_duplicates = structured_df.duplicated().sum()
 print(structured_df)
 print(f"Number of duplicate rows: {num_duplicates}")
 print(structured_df.info())
-
+unique_values = structured_df['Brand'].unique()
+print(f"Unique values in '{structured_df['Brand']}':")
+print(unique_values)
+unique_values = structured_df['Body_Type'].unique()
+print(f"Unique values in '{structured_df['Body_Type']}':")
+print(unique_values)
 
 # Save DataFrame to CSV file
 structured_df.to_csv('cleaned_car_data.csv', index=False)
@@ -148,7 +144,6 @@ numeric_cols = ['KM_Driven', 'Engine', 'Registration_Year', 'Model_Year']
 # Create transformations
 preprocessed=ColumnTransformer(transformers=[('num',StandardScaler(),numeric_cols),('cat',OneHotEncoder(),categorical_cols)])
 
-# Transform data
 X_preprocessed = preprocessed.fit_transform(X)
 
 X_train,X_test,Y_train,Y_test=train_test_split(X_preprocessed,Y, test_size=0.2, random_state=69)
@@ -175,12 +170,9 @@ rf_params = {
     'max_features': ['sqrt', 'log2', None]
 }
 
-
-# Run GridSearchCV on the Random Forest model
 grid_search_rf = GridSearchCV(RandomForestRegressor(random_state=42), rf_params, scoring='r2', cv=5, n_jobs=-1)
 grid_search_rf.fit(X_train, Y_train)
 
-# Display the best parameters and the best score from the grid search
 print("Best parameters for Random Forest:", grid_search_rf.best_params_)
 print("Best R2 score from Grid Search:", grid_search_rf.best_score_)
 
@@ -188,17 +180,17 @@ print("Best R2 score from Grid Search:", grid_search_rf.best_score_)
 best_rf_model = grid_search_rf.best_estimator_
 Y_pred_best_rf = best_rf_model.predict(X_test)
 
-# Evaluate the best model on the test data
 print("Optimized Random Forest Evaluation:")
 print(f"MAE: {mean_absolute_error(Y_test, Y_pred_best_rf):.2f}")
 print(f"MSE: {mean_squared_error(Y_test, Y_pred_best_rf):.2f}")
 print(f"R2 Score: {r2_score(Y_test, Y_pred_best_rf):.2f}\n")
 
-
-
-# Save the best model using pickle
 with open('best_rf_model.pkl', 'wb') as f:
     pickle.dump(best_rf_model, f)
 
-print("The optimized Random Forest model has been saved as 'best_rf_model.pkl'.")
 
+with open('preprocessor.pkl', 'wb') as preprocessor_file:
+    pickle.dump(preprocessed, preprocessor_file)
+
+print("The optimized Random Forest model has been saved as 'best_rf_model.pkl'.")
+print("The preprocessor has been saved as 'preprocessor.pkl'.")

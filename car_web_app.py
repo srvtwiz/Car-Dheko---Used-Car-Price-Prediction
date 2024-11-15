@@ -1,55 +1,60 @@
 import streamlit as st
 import pandas as pd
 import pickle
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.compose import ColumnTransformer
+from PIL import Image
 
-# Load the saved model and preprocessor
+# Load the pre-trained model and preprocessor
 with open('best_rf_model.pkl', 'rb') as model_file:
     model = pickle.load(model_file)
 
-# Define categorical and numerical columns
-categorical_cols = ['Fuel_Type', 'Body_Type', 'Transmission', 'Brand', 'City']
-numeric_cols = ['KM_Driven', 'Engine', 'Registration_Year', 'Model_Year']
+with open('preprocessor.pkl', 'rb') as preprocessor_file:
+    preprocessor = pickle.load(preprocessor_file)
 
-# Create transformations
-preprocessed=ColumnTransformer(transformers=[('num',StandardScaler(),numeric_cols),('cat',OneHotEncoder(),categorical_cols)])
+    body_type_images = {
+    'Sedan': 'data/sedan.jpg',
+    'SUV': 'data/suv.jpg',
+    'Hatchback': 'data/hatchback.jpg',
+    'Convertibles': 'data/convert.jpg',
+}
 
-# Streamlit App Layout
-st.title("Car Price Prediction")
-st.write("This application predicts the price of a used car based on various features.")
+st.title("Car Price Prediction App")
+st.sidebar.header("Enter Car Details")
 
-# Input Fields for each feature
-fuel_type = st.selectbox('Fuel Type', ['Petrol', 'Diesel', 'Electric', 'CNG'])
-body_type = st.selectbox('Body Type', ['SUV', 'Sedan', 'Hatchback', 'Convertible', 'Coupe', 'Wagon'])
-transmission = st.selectbox('Transmission', ['Manual', 'Automatic'])
-brand = st.selectbox('Brand', ['Toyota', 'Honda', 'Ford', 'BMW', 'Mercedes', 'Audi'])  # Adjust brand list accordingly
-# model_name = st.text_input('Model')
-city = st.selectbox('City', ['Bangalore', 'Chennai', 'Delhi', 'Hyderabad', 'Jaipur', 'Kolkata'])
-km_driven = st.number_input('Kilometers Driven', min_value=0)
-engine_size = st.number_input('Engine Size (in CC)', min_value=0)
-registration_year = st.number_input('Registration Year', min_value=1900, max_value=2024, value=2015)
-model_year = st.number_input('Model Year', min_value=1900, max_value=2024, value=2015)
+# User input fields
+fuel_type = st.sidebar.selectbox("Fuel Type", ["Petrol", "Diesel", "Electric"])
+body_type = st.sidebar.selectbox("Body Type", list(body_type_images.keys()))
+if body_type in body_type_images:
+    image_path = body_type_images[body_type]
+    image = Image.open(image_path)
+    st.image(image, caption=f"{body_type}", use_container_width=True)
 
-# Create DataFrame with user input
-input_data = pd.DataFrame({
-    'Fuel_Type': [fuel_type],
-    'Body_Type': [body_type],
-    'Transmission': [transmission],
-    'Brand': [brand],
-    # 'Model': [model_name],
-    'City': [city],
-    'KM_Driven': [km_driven],
-    'Engine': [engine_size],
-    'Registration_Year': [registration_year],
-    'Model_Year': [model_year]
-})
+transmission = st.sidebar.selectbox("Transmission", ["Manual", "Automatic"])
+km_driven = st.sidebar.number_input("Kilometers Driven", min_value=0, value=10000, step=1000)
+model_year = st.sidebar.number_input("Model Year", min_value=2001, max_value=2024, value=2019)
+engine_size = st.sidebar.number_input("Engine (CC)", min_value=1000, max_value=6000, value=2000)
+brand = st.sidebar.selectbox("Brand", ['Maruti' ,'Ford' ,'Tata' ,'Hyundai', 'Jeep' ,'Datsun' ,'Honda' ,'Mahindra'
+ ,'Mercedes-Benz' ,'BMW' ,'Renault' ,'Audi' ,'Toyota', 'Mini', 'Kia', 'Skoda'
+ ,'Volkswagen' ,'Volvo' ,'MG' ,'Nissan' ,'Fiat' ,'Mitsubishi' ,'Jaguar' ,'Land Rover' ,'Chevrolet' ,'Citroen' , 'Isuzu', 'Lexus', 'Porsche'])
+city = st.sidebar.selectbox("City", ["bangalore", "chennai", "delhi", "hyderabad", "jaipur", "kolkata"])
+registration_year = st.sidebar.number_input("Registration Year", min_value=1990, max_value=2023, value=2015)
 
-# Preprocess the input data
-input_data_transformed = preprocessed.fit_transform(input_data)
+# Button to make a prediction
+if st.sidebar.button("Predict Price"):
+    # Prepare data for prediction
+    data = pd.DataFrame({
+        'Fuel_Type': [fuel_type],
+        'Body_Type': [body_type],
+        'Transmission': [transmission],
+        'KM_Driven': [km_driven],
+        'Model_Year': [model_year],
+        'Engine': [engine_size],
+        'Brand': [brand],
+        'City': [city],
+        'Registration_Year': [registration_year]
+    })
 
-# Predict the price
-predicted_price = model.predict(input_data_transformed)
+    data_preprocessed = preprocessor.transform(data)
+    price_prediction = model.predict(data_preprocessed)
+    st.write(f"Predicted Price of the Car: ₹ {price_prediction[0]:.2f} Lakh")
 
-# Display the predicted price
-st.write(f"The estimated price of the car is: ₹ {predicted_price[0]:,.2f} Lakh")
+
