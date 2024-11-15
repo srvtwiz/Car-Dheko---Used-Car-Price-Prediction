@@ -130,6 +130,10 @@ unique_values = structured_df['Body_Type'].unique()
 print(f"Unique values in '{structured_df['Body_Type']}':")
 print(unique_values)
 
+unique_values = structured_df['Fuel_Type'].unique()
+print(f"Unique values in '{structured_df['Fuel_Type']}':")
+print(unique_values)
+
 # Save DataFrame to CSV file
 structured_df.to_csv('cleaned_car_data.csv', index=False)
 

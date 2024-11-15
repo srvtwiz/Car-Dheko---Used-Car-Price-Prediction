@@ -21,7 +21,7 @@ st.title("Car Price Prediction App")
 st.sidebar.header("Enter Car Details")
 
 # User input fields
-fuel_type = st.sidebar.selectbox("Fuel Type", ["Petrol", "Diesel", "Electric"])
+fuel_type = st.sidebar.selectbox("Fuel Type", ["Petrol", "Diesel", "Electric",'Lpg', 'Cng'])
 body_type = st.sidebar.selectbox("Body Type", list(body_type_images.keys()))
 if body_type in body_type_images:
     image_path = body_type_images[body_type]
